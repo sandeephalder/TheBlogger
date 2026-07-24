@@ -1,0 +1,16 @@
+seaborn
+scikit-learn
+langchain
+langchain-core
+langchain-community
+python-dotenv
+langgraph
+langchain-google-genai
+google-genai
+langchain_groq
+fastapi
+uvicorn
+watchdog
+langgraph-cli[inmem]
+langchain_openai
+langchain_deepseek
