@@ -16,3 +16,8 @@ langchain_openai
 langchain_deepseek
 langchain-mcp-adapters
 requests
+arxiv
+pymupdf
+pytest
+arxiv_mcp
+ddgs

@@ -1,48 +1,71 @@
 import asyncio
 import os
+import sys
+import pytest
+import httpx
+from unittest.mock import MagicMock, patch
 from dotenv import load_dotenv
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 load_dotenv()
 
-async def run_test():
-    # Configure the client to spawn and talk to your Python server
-    server_params = StdioServerParameters(
-        command="python",
-        args=["tools/wordpress_tool.py"],
-        env=os.environ.copy()
-    )
-    
-    print("🚀 Connecting to Python WordPress MCP Server...")
-    
-    async with stdio_client(server_params) as (read_stream, write_stream):
-        async with ClientSession(read_stream, write_stream) as session:
-            # Step 1: Initialize connection
-            await session.initialize()
-            print("✅ Connection initialized successfully.")
-            
-            # Step 2: List available tools to ensure discovery works
-            print("\n🔍 Fetching available tools...")
-            tools_response = await session.list_tools()
-            for tool in tools_response.tools:
-                print(f"   Found tool: {tool.name} - {tool.description}")
-            
-            # Step 3: Directly call your WordPress tool
-            print("\n🗑️ Sending post deletion request...")
-            delete_arguments = {
-                "post_id": 55,  # 👈 Replace with your actual post ID number
-                "force": False    # Set to True if you want to bypass Trash completely
-            }
-            result = await session.call_tool("delete_post", arguments=delete_arguments) 
-            
-            print("\n📥 Server Response Content:")
-            print("-" * 40)
-            # Display text contents returned from your server
-            for content in result.content:
-                if content.type == "text":
-                    print(content.text)
-            print("-" * 40)
+from tools.wordpress_tool import delete_post
 
-if __name__ == "__main__":
-    asyncio.run(run_test())
+# --- Pure Unit Tests ---
+
+@patch("httpx.AsyncClient.delete")
+def test_delete_post_trash_success(mock_delete):
+    """Test moving post to Trash with mocked HTTP response."""
+    async def _run():
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_delete.return_value = mock_response
+
+        response = await delete_post(post_id=55, force=False)
+        assert "🗑️ Success! Post 55 has been moved to Trash." in response
+
+    asyncio.run(_run())
+
+
+@patch("httpx.AsyncClient.delete")
+def test_delete_post_force_success(mock_delete):
+    """Test permanently deleting post with mocked HTTP response."""
+    async def _run():
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_delete.return_value = mock_response
+
+        response = await delete_post(post_id=55, force=True)
+        assert "🗑️ Success! Post 55 has been permanently deleted." in response
+
+    asyncio.run(_run())
+
+
+@patch("httpx.AsyncClient.delete")
+def test_delete_post_http_error(mock_delete):
+    """Test handling of HTTP error during post deletion."""
+    async def _run():
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_response.text = "Post Not Found"
+        error = httpx.HTTPStatusError("404 Not Found", request=MagicMock(), response=mock_response)
+        mock_delete.side_effect = error
+
+        response = await delete_post(post_id=999)
+        assert "WordPress API Error: Status 404 - Post Not Found" in response
+
+    asyncio.run(_run())
+
+
+@patch("httpx.AsyncClient.delete")
+def test_delete_post_generic_exception(mock_delete):
+    """Test handling of generic exception during post deletion."""
+    async def _run():
+        mock_delete.side_effect = Exception("Network unreachable")
+        response = await delete_post(post_id=55)
+        assert "An unexpected error occurred: Network unreachable" in response
+
+    asyncio.run(_run())

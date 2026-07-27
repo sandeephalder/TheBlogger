@@ -1,42 +1,85 @@
 import asyncio
 import os
+import sys
+import pytest
+import httpx
+from unittest.mock import MagicMock, patch
 from dotenv import load_dotenv
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 load_dotenv()
 
-async def run_test():
-    server_params = StdioServerParameters(
-        command="python",
-        args=["tools/wordpress_tool.py"],
-        env=os.environ.copy()
-    )
-    
-    print("🚀 Connecting to Python WordPress MCP Server...")
-    
-    async with stdio_client(server_params) as (read_stream, write_stream):
-        async with ClientSession(read_stream, write_stream) as session:
-            await session.initialize()
-            print("✅ Connection initialized.")
-            
-            # Target our new creation tool
-            print("\n✍️ Sending post creation request to server...")
-            
-            post_arguments = {
-                "title": "My First Automated MCP Post",
-                "content": "<p>This article was published seamlessly using a custom Python MCP server tool structure!</p>",
-                "status": "draft"  # Set to "publish" if you want it immediately live
-            }
-            
-            result = await session.call_tool("create_new_post", arguments=post_arguments)
-            
-            print("\n📥 Server Response Content:")
-            print("-" * 40)
-            for content in result.content:
-                if content.type == "text":
-                    print(content.text)
-            print("-" * 40)
+from tools.wordpress_tool import create_new_post
 
-if __name__ == "__main__":
-    asyncio.run(run_test())
+# --- Pure Unit Tests ---
+
+@patch("httpx.AsyncClient.post")
+def test_create_new_post_success_draft(mock_post):
+    """Test creating a new draft post with mocked HTTP response."""
+    async def _run():
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "id": 101,
+            "status": "draft",
+            "link": "https://example.wordpress.com/my-first-post"
+        }
+        mock_post.return_value = mock_response
+
+        response = await create_new_post(title="New Post", content="Post content", status="draft")
+        assert "🎉 Success! Post created successfully." in response
+        assert "- ID: 101" in response
+        assert "- Status: DRAFT" in response
+
+    asyncio.run(_run())
+
+
+@patch("httpx.AsyncClient.post")
+def test_create_new_post_success_publish(mock_post):
+    """Test creating and publishing a post directly."""
+    async def _run():
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "id": 102,
+            "status": "publish",
+            "link": "https://example.wordpress.com/live-post"
+        }
+        mock_post.return_value = mock_response
+
+        response = await create_new_post(title="Live Post", content="Live content", status="publish")
+        assert "🎉 Success! Post created successfully." in response
+        assert "- ID: 102" in response
+        assert "- Status: PUBLISH" in response
+
+    asyncio.run(_run())
+
+
+@patch("httpx.AsyncClient.post")
+def test_create_new_post_http_error(mock_post):
+    """Test handling of HTTP error during post creation."""
+    async def _run():
+        mock_response = MagicMock()
+        mock_response.status_code = 400
+        mock_response.text = "Bad Request"
+        error = httpx.HTTPStatusError("400 Bad Request", request=MagicMock(), response=mock_response)
+        mock_post.side_effect = error
+
+        response = await create_new_post(title="Fail Post", content="Content")
+        assert "WordPress API Error: Status 400 - Bad Request" in response
+
+    asyncio.run(_run())
+
+
+@patch("httpx.AsyncClient.post")
+def test_create_new_post_generic_exception(mock_post):
+    """Test handling of generic exception during post creation."""
+    async def _run():
+        mock_post.side_effect = Exception("Timeout error")
+        response = await create_new_post(title="Timeout Post", content="Content")
+        assert "An unexpected error occurred: Timeout error" in response
+
+    asyncio.run(_run())
