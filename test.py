@@ -1,13 +1,38 @@
+from utils.constants import LLM_PROVIDER_GEMINI
 from llms.llm_factory import LLMFactory
-from utils.constants import LLM_PROVIDER_DEEPSEEK,DEEPSEEK_MODEL_V3_CHAT,LLM_PROVIDER_GEMINI,GEMINI_MODEL_FLASH,LLM_PROVIDER_GROQ,GROQ_MODEL_INSTA,OPENAI_MODEL_4O_MINI,LLM_PROVIDER_OPENAI
+from utils.constants import GEMINI_MODEL_FLASH,LLM_PROVIDER_GEMINI
+import os
+import base64
+from dotenv import load_dotenv
 
 
 
-def test_connector():
+def test_blogger_wordpress():
+    # 1. Target the Official WordPress.com Remote MCP Engine Endpoint
+    # See documentation at https://wordpress.com
+    wp_mcp_url = os.getenv("WORDPRESS_URL")
+    
+    # 2. Construct Basic Authentication Headers
+    username = os.getenv("WORDPRESS_USERNAME")
+    password = os.getenv("WORDPRESS_PASSWORD")
+    auth_str = f"{username}:{password}"
+    b64_auth = base64.b64encode(auth_str.encode()).decode()
+    
+    headers = {
+        "Authorization": f"Basic {b64_auth}",
+        "Content-Type": "application/json"
+    }
+    
+    print("Connecting to WordPress.com MCP server...")
+    
+
+    
+
+def test_connector_llm():
 
     # 2. Initialize your model as usual
     #llm = LLMFactory().get_llm(LLM_PROVIDER_GEMINI,GEMINI_MODEL_FLASH)
-    llm = LLMFactory().get_llm(LLM_PROVIDER_DEEPSEEK,DEEPSEEK_MODEL_V3_CHAT)
+    llm = LLMFactory().get_llm(LLM_PROVIDER_GEMINI, GEMINI_MODEL_FLASH)
 
     # 3. Execute your run
     # This call is automatically intercepted and sent to your LangSmith project dashboard
@@ -21,7 +46,8 @@ def test_connector():
 
 
 if __name__ == "__main__":
-    test_connector()
+    load_dotenv()
+    test_connector_llm()
 
 
 
