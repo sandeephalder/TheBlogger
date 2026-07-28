@@ -1,3 +1,4 @@
+from utils.colors import print_cyan
 import sys
 import asyncio
 from functools import partial
@@ -19,12 +20,14 @@ async def ddg_web_search(query: str) -> str:
     """
     Search the web anonymously via DuckDuckGo to get structured summaries and links.
     """
+    print(" inside ddg web search node\n\n===============> ", query)
     log_info(f"Received web search request for: '{query}'")
     try:
         loop = asyncio.get_running_loop()
         def execute_search():
             with DDGS() as ddgs:
                 results = list(ddgs.text(query, max_results=5))
+                print_cyan(f"DDG Search Results : \n==============> \n",results)
                 if not results: return "No results found."
                 return "\n".join([f"[{i}] {r.get('title')}\nURL: {r.get('href')}\nSummary: {r.get('body')}\n" for i, r in enumerate(results, 1)])
         return await loop.run_in_executor(None, execute_search)
@@ -40,6 +43,7 @@ async def ddg_fetch_page(url: str) -> str:
     Args:
         url: The web page address (HTTP/HTTPS) to extract text from.
     """
+    print(" inside ddg fetch page node\n\n===============> ", url)
     log_info(f"Received page fetch request for URL: '{url}'")
     
     try:

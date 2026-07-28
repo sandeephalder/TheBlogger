@@ -21,3 +21,4 @@ pymupdf
 pytest
 arxiv_mcp
 ddgs
+langchain-ollama

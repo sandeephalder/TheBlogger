@@ -4,6 +4,7 @@ from blueprint.states.blogstate import BlogState
 from utils.constants import LLM_PROVIDER_GEMINI
 from llms.llm_factory import LLMFactory
 from utils.constants import GEMINI_MODEL_FLASH,LLM_PROVIDER_GEMINI
+from agents.duckduck_search_tool_node import SearchDuckDuckGoNode
 
 
 class AgentFlow:
@@ -18,12 +19,15 @@ class AgentFlow:
 
         self.blog_node_obj=BlogNode(self.llm)
         self.graph.add_node("question_breakdown",self.blog_node_obj.questions_breakdown)
+        self.search_node_obj = SearchDuckDuckGoNode(self.llm)
+        self.graph.add_node("search", self.search_node_obj.searchnode_execution)
         self.graph.add_node("blog_content_generation",self.blog_node_obj.blog_content_generation)
 
         ## Edges
         self.graph.add_edge(START,"question_breakdown")
-        self.graph.add_edge("question_breakdown","blog_content_generation")
-        self.graph.add_edge("blog_content_generation",END)
+        self.graph.add_edge("question_breakdown","search")
+        self.graph.add_edge("search","blog_content_generation")
+        self.graph.add_edge("blog_content_generation",END)  
         
         return self.graph
 
