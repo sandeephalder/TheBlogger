@@ -1,4 +1,4 @@
-from utils.colors import print_cyan
+from utils.colors import print_yellow, print_cyan
 import sys
 import asyncio
 from functools import partial
@@ -16,18 +16,18 @@ def log_info(message: str):
     sys.stderr.flush()
 
 @mcp.tool()
-async def ddg_web_search(query: str) -> str:
+async def ddg_web_search(query: str, max_results: int = 5) -> str:
     """
     Search the web anonymously via DuckDuckGo to get structured summaries and links.
     """
-    print(" inside ddg web search node\n\n===============> ", query)
-    log_info(f"Received web search request for: '{query}'")
+    print_yellow(f"\n🔍 inside ddg web search node\n===============> Query: {query}")
+    log_info(f"Received web search request for: '{query}' (max_results={max_results})")
     try:
         loop = asyncio.get_running_loop()
         def execute_search():
             with DDGS() as ddgs:
-                results = list(ddgs.text(query, max_results=5))
-                print_cyan(f"DDG Search Results : \n==============> \n",results)
+                results = list(ddgs.text(query, max_results=max_results))
+                print_cyan("DDG Search Results :\n===============>\n", results)
                 if not results: return "No results found."
                 return "\n".join([f"[{i}] {r.get('title')}\nURL: {r.get('href')}\nSummary: {r.get('body')}\n" for i, r in enumerate(results, 1)])
         return await loop.run_in_executor(None, execute_search)

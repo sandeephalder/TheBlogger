@@ -14,6 +14,7 @@
 }
 """
 
+from utils.colors import print_cyan,print_green
 import urllib.request
 from urllib.parse import urlparse
 import os
@@ -93,11 +94,11 @@ def search_arxiv_papers(query: str, max_results: int = 5) -> str:
     """
     search = arxiv.Search(query=query, max_results=max_results)
     results = []
-    
+    print_cyan(f"inside search_arxiv_papers with query: {query}")
     for paper in client.results(search):
         # Extract the pure ID from the full entry URL (e.g., '1706.03762v7' -> '1706.03762')
         paper_id = paper.entry_id.split("/abs/")[-1].split("v")[0]
-        
+        print_cyan(f" search_arxiv_papers paper details : {paper}")
         results.append(
             f"Title: {paper.title}\n"
             f"ID: {paper_id}\n"
@@ -119,10 +120,11 @@ def get_arxiv_paper_by_id(paper_id: str) -> str:
     # Clean the ID string just in case the LLM includes formatting
     clean_id = paper_id.strip()
     search = arxiv.Search(id_list=[clean_id])
-    
+    print_green(f"Inside get_arxiv_paper_by_id with paper id{paper_id}")
     try:
         paper = next(client.results(search))
         local_pdf_link, full_text = _download_and_extract_pdf(clean_id, paper.pdf_url)
+        print_green(f" Paper full text {full_text}")
         return (
             f"Title: {paper.title}\n"
             f"ID: {clean_id}\n"

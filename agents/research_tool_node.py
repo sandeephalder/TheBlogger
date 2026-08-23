@@ -3,9 +3,9 @@ import asyncio
 from typing import List, Dict, Any
 from langchain_core.messages import ToolMessage
 from langgraph.prebuilt import ToolNode
-from tools.websearch_duckduck import ddg_web_search, ddg_fetch_page
+from tools.arxiv_tool import search_arxiv_papers, get_arxiv_paper_by_id
 from blueprint.states.blogstate import BlogState
-from prompts.search_node_prompt import search_prompt
+from prompts.research_node_prompt import research_prompt
 from utils.colors import print_yellow, print_magenta, print_cyan, print_blue, print_green
 
 def log_tool_node(text: str):
@@ -13,17 +13,16 @@ def log_tool_node(text: str):
     sys.stderr.write(f"[Tool Node Log] {text}\n")
     sys.stderr.flush()
 
-class SearchDuckDuckGoNode:
-    """Encapsulates LangGraph tool nodes and custom manual execution logic."""
+class ResearchToolNode:
+    """Encapsulates LangGraph tool nodes for arXiv academic paper research."""
     def __init__(self, llm):
-        # Initialize LLM
         self.llm = llm
-        # 1. Build the automatic routing ToolNode
-        self.langchain_tools = [ddg_web_search, ddg_fetch_page]
+        # Build the automatic routing ToolNode with ArXiv research tools
+        self.langchain_tools = [search_arxiv_papers, get_arxiv_paper_by_id]
         self.llm_with_tools = self.llm.bind_tools(self.langchain_tools)
         self.node = ToolNode(self.langchain_tools)
         
-        # 2. Cache a tool map to allow easy manual calls by name
+        # Cache a tool map to allow easy manual calls by name
         self.tool_map: Dict[str, Any] = {getattr(t, "name", getattr(t, "__name__", str(t))): t for t in self.langchain_tools}
         
     def get_tool(self, name: str):
@@ -62,18 +61,18 @@ class SearchDuckDuckGoNode:
             return str(fn(**filtered_args))
         return str(tool_func)
 
-    def searchnode_execution(self, state: BlogState):
+    def research_node_execution(self, state: BlogState):
         """
-        Executes the search node for the given state using LLM bound with tools
+        Executes the research node for the given state using LLM bound with arXiv tools.
         """
-        print_yellow(f"\n🔎 Inside Search Node\n ===============> \nTopic: {state['topic']}")
+        print_yellow(f"\n📚 Inside ArXiv Research Node\n ===============> \nTopic: {state['topic']}")
 
         blog_data = state.get("blog", {})
         title_val = blog_data.get("title", "") if isinstance(blog_data, dict) else getattr(blog_data, "title", "")
         if not title_val:
             title_val = state.get("title", state.get("topic", ""))
 
-        system_message = search_prompt.format(topic=state["topic"], title=title_val)
+        system_message = research_prompt.format(topic=state["topic"], title=title_val)
 
         if "topic" in state and state["topic"]:
             print_blue(f"System Message:\n{system_message}")
@@ -83,9 +82,9 @@ class SearchDuckDuckGoNode:
             search_summary = response.content
             tool_calls = getattr(response, "tool_calls", [])
 
-            # Automatically execute tool calls if LLM requests search execution
+            # Automatically execute tool calls if LLM requests arXiv paper search/retrieval
             if tool_calls:
-                print_magenta(f"\n⚙️  [Tool Node] Executing {len(tool_calls)} requested tool call(s)...")
+                print_magenta(f"\n⚙️  [Tool Node] Executing {len(tool_calls)} requested arXiv tool call(s)...")
                 executed_results = []
                 for tool_call in tool_calls:
                     t_name = tool_call.get("name")
@@ -96,8 +95,8 @@ class SearchDuckDuckGoNode:
                 
                 search_summary = "\n\n".join(executed_results)
                 
-                # Request final summary from LLM using retrieved tool results
-                synthesis_prompt = f"{system_message}\n\nRetrieved Search Information:\n{search_summary}\n\nSummarize the factual key findings with links."
+                # Request final summary from LLM using retrieved arXiv research results
+                synthesis_prompt = f"{system_message}\n\nRetrieved arXiv Research Information:\n{search_summary}\n\nSummarize key research paper findings with citations and IDs."
                 final_response = self.llm.invoke(synthesis_prompt)
                 if final_response.content:
                     search_summary = final_response.content
@@ -105,7 +104,10 @@ class SearchDuckDuckGoNode:
             return {
                 "blog": {
                     "title": title_val,
-                    "search_summary": search_summary,
+                    "research_summary": search_summary,
                     "tool_calls": tool_calls
                 }
             }
+
+    # Alias for method compatibility
+    searchnode_execution = research_node_execution
