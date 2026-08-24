@@ -22,4 +22,3 @@ pytest
 arxiv_mcp
 ddgs
 langchain-ollama
-sarvamai

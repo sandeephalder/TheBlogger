@@ -40,15 +40,6 @@ class AgentFlow:
 
         return self.graph.compile()
 
-# `graph` is what langgraph-cli picks up. Building it needs a live Gemini key,
-# so keep a missing key from breaking every import of this module (app.py imports
-# it for the /blogs route, and the chat flow lives alongside it).
-try:
-    llm = LLMFactory().get_llm(LLM_PROVIDER_GEMINI, GEMINI_MODEL_FLASH)
-    agent_flow = AgentFlow(llm)
-    graph = agent_flow.setup_blog_flow("blog")
-except Exception as e:
-    print(f"Skipping default blog graph build : {e}")
-    llm = None
-    agent_flow = None
-    graph = None
+llm = LLMFactory().get_llm(LLM_PROVIDER_GEMINI, GEMINI_MODEL_FLASH)
+agent_flow = AgentFlow(llm)
+graph = agent_flow.setup_blog_flow("blog")
