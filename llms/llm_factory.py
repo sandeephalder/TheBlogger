@@ -1,8 +1,9 @@
 
-from utils.constants import LLM_PROVIDER_GEMINI, LLM_PROVIDER_GROQ, LLM_PROVIDER_OPENAI, LLM_PROVIDER_DEEPSEEK, LLM_PROVIDER_OLLAMA, LLM_PROVIDER_QWEN, LLM_PROVIDER_GLM
+from utils.constants import LLM_PROVIDER_GEMINI, LLM_PROVIDER_GROQ, LLM_PROVIDER_OPENAI, LLM_PROVIDER_DEEPSEEK, LLM_PROVIDER_OLLAMA, LLM_PROVIDER_QWEN, LLM_PROVIDER_GLM, LLM_PROVIDER_OPENAI_REASONING
 from llms.gemini_llm import GeminiLLM
 from llms.groq_llm import GroqLLM
 from llms.openapi_llm import OpenAILLM
+from llms.openai_reasoning_llm import OpenAIReasoningLLM
 from llms.deepseek_llm import DeepSeekLLM
 from llms.ollama_local_llm import OllamaLocalLLM
 from llms.qwen_llm import QwenLLM
@@ -12,7 +13,7 @@ class LLMFactory:
     def __init__(self):
         pass
     
-    def get_llm(self, llm_name, model_name):
+    def get_llm(self, llm_name, model_name, **kwargs):
         try:
             if llm_name == LLM_PROVIDER_GEMINI:
                 gemini = GeminiLLM()
@@ -23,6 +24,9 @@ class LLMFactory:
             elif llm_name == LLM_PROVIDER_OPENAI:
                 openai = OpenAILLM()
                 return openai.get_llm(model_name)
+            elif llm_name == LLM_PROVIDER_OPENAI_REASONING:
+                openai_reasoning = OpenAIReasoningLLM()
+                return openai_reasoning.get_llm(model_name, **kwargs)
             elif llm_name == LLM_PROVIDER_DEEPSEEK:
                 deepseek = DeepSeekLLM()
                 return deepseek.get_llm(model_name)
@@ -38,4 +42,4 @@ class LLMFactory:
             else:
                 raise ValueError("Invalid LLM name")
         except Exception as e:
-            raise ValueError(f"Error occurred with exception : {e}") 
+            raise ValueError(f"Error occurred with exception : {e}")
